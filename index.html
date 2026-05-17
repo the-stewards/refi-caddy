@@ -751,6 +751,11 @@
     }
     .btn-copy.copied { background: var(--green); }
 
+    .merge-code {
+      color: var(--orange);
+      font-weight: 700;
+    }
+
     .txt-error {
       font-family: 'Frank Ruhl Libre', serif;
       font-size: 16px;
@@ -997,16 +1002,20 @@ not a bot, not a template.
 
 Rules you never break:
 - 3 sentences maximum. Sometimes 2 is better.
-- No signature line. No "— Ryan" or "— Chris" at the end.
+- No signature line at the end.
 - No bullet points. No line breaks between sentences unless it sounds natural.
 - Never use the word "potentially." Replace it with "looks like" or "I think" or "it seems."
 - Never mention the new payment amount — only the savings.
 - Never start with "I hope this message finds you well" or any formal opener.
 - Vary your openers — never start two versions with the same word or phrase.
 - Sound like the math was just run this morning and you're texting them immediately.
-- Include: their last name, sender first name, monthly savings dollar amount, property address, breakeven timeframe in plain English (not "X months" — say "about a year" or "under two years" etc.), and a soft one-question close.
+- Include: the client first name, the agent first name, monthly savings dollar amount, the property address, breakeven timeframe in plain English (not "X months" — say "about a year" or "under two years" etc.), and a soft one-question close.
 - If PMI is being eliminated, mention it naturally as a bonus — not as a separate paragraph.
-- Lowercase is fine for casual words. Match how real humans text.`;
+- Lowercase is fine for casual words. Match how real humans text.
+- IMPORTANT: Use these exact merge codes where appropriate — do not substitute real names or addresses:
+  {firstname} = client's first name
+  {agent_firstname} = agent's first name
+  {contact_address} = the property address`;
 
 // ══ STATE ════════════════════════════════════════════════════════════
 let allClients   = [];
@@ -1055,9 +1064,10 @@ function parseRate(val) {
 }
 
 function calculateClient(row, idx) {
-  const loanType = String(row['Loan Type']    || '').toUpperCase().trim();
-  const loanProg = String(row['Loan Program'] || '');
-  const borrower = String(row['Borrower']     || '').trim();
+  const loanType  = String(row['Loan Type']    || '').toUpperCase().trim();
+  const loanProg  = String(row['Loan Program'] || '');
+  const borrower  = String(row['Borrower']     || '').trim();
+  const firstName = String(row['Borrower First Name'] || row['First Name'] || row['Borrower F Name'] || '').trim();
 
   const currentRate = parseRate(row['Current Rate']);
   const convRate    = parseRate(row['Conv Rate Est.']);
@@ -1111,7 +1121,7 @@ function calculateClient(row, idx) {
   if (isDoubleDip) flags.push('DOUBLE_DIP');
 
   return {
-    id: 'c' + idx, borrower, loanNumber: String(row['Loan Number'] || ''),
+    id: 'c' + idx, borrower, firstName, loanNumber: String(row['Loan Number'] || ''),
     phone: String(row['Borrower Phone'] || ''), email: String(row['Borrower Email'] || ''),
     address: String(row['Address'] || '').trim(), origFico: String(row['Orig. FICO'] || ''),
     loanType, loanProg, closingDate, currentRate, newRate, origLTV, ltvEst,
@@ -1346,22 +1356,33 @@ function renderResults(buckets, convRate, fhaRate, skipped) {
 }
 
 // ══ API CALLS ════════════════════════════════════════════════════════
+function resolveMergeCodes(text, c) {
+  const addr      = c.address   || '{contact_address}';
+  const firstName = c.firstName || '{firstname}';
+  return text
+    .replace(/\{agent_firstname\}/gi, sender)
+    .replace(/\{firstname\}/gi,       firstName)
+    .replace(/\{contact_address\}/gi, addr);
+}
+
 function buildUserMsg(c) {
-  const addr    = c.address || 'their place';
   const pmiLine = c.pmiSavings > 0
     ? `PMI eliminated: yes — saves $${Math.round(c.pmiSavings)}/month additional`
     : 'PMI eliminated: no';
   const loanCtx = `${c.loanType === 'FHA' ? 'FHA' : 'Conventional'} ${c.loanProg.toLowerCase().includes('15') ? '15yr' : '30yr'}`;
-  return `Client last name: ${c.borrower}
-Sender first name: ${sender}
+
+  return `Merge codes to use (use these literally in the output — do not replace them):
+  {firstname} = client first name
+  {agent_firstname} = ${sender}
+  {contact_address} = ${c.address || 'the property address'}
+
 Monthly savings: $${Math.round(c.totalSavings)}
-Address: ${addr}
 Breakeven: ${c.breakevenMonths} months
 ${pmiLine}
 Loan context: ${loanCtx}
 Closing date: ${fmtDate(c.closingDate)}
 
-Write one short, casual text message.`;
+Write one short, casual text message using the merge codes above.`;
 }
 
 async function callAPI(messages) {
@@ -1419,11 +1440,16 @@ async function remixText(cid) {
   renderTextPanel(c);
 }
 
+function highlightMergeCodes(text) {
+  return esc(text).replace(/\{(agent_firstname|firstname|contact_address)\}/gi,
+    '<span class="merge-code">{$1}</span>');
+}
+
 function renderTextPanel(c) {
   const panel = document.getElementById(`panel-${c.id}`);
   panel.classList.add('open');
   panel.innerHTML = `
-<div class="txt-msg" id="msg-${c.id}">${c.currentMessage}</div>
+<div class="txt-msg" id="msg-${c.id}">${highlightMergeCodes(resolveMergeCodes(c.currentMessage, c))}</div>
 <div class="txt-actions">
   <button class="btn-remix" onclick="remixText('${c.id}')">🔄 REMIX</button>
   <button class="btn-copy" id="btn-copy-${c.id}" onclick="copyText('${c.id}')">COPY TEXT</button>
@@ -1453,7 +1479,8 @@ function handleGenClick(cid) {
 function copyText(cid) {
   const c = allClients.find(x => x.id === cid);
   if (!c?.currentMessage) return;
-  navigator.clipboard.writeText(c.currentMessage).then(() => {
+  const resolved = resolveMergeCodes(c.currentMessage, c);
+  navigator.clipboard.writeText(resolved).then(() => {
     const btn = document.getElementById(`btn-copy-${cid}`);
     if (!btn) return;
     btn.textContent = 'COPIED ✓';
