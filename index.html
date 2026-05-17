@@ -854,8 +854,10 @@ const TEAM_PASSWORD = 'stewards2026';
   if (sessionStorage.getItem('rc-auth') === '1') {
     document.getElementById('screen-password').style.display = 'none';
     document.getElementById('screen-upload').style.display   = 'flex';
+  } else {
+    // Auto-focus password field so team can type immediately
+    setTimeout(() => document.getElementById('pw-input')?.focus(), 100);
   }
-  // else: password screen is already visible, upload screen is hidden
 })();
 
 function checkPassword() {
@@ -974,8 +976,8 @@ function calculateClient(row, idx) {
   const piSavings = currentPI - newPI;
 
   let pmiSavings = 0;
-  if (ltvEst > 80 && currentPMI > 0) {
-    const newLTV = propValue > 0 ? (upb / propValue) * 100 : ltvEst;
+  if (ltvEst > 80 && currentPMI > 0 && propValue > 0) {
+    const newLTV = (upb / propValue) * 100;
     if (newLTV < 80) pmiSavings = currentPMI;
   }
 
@@ -1062,6 +1064,14 @@ function parseSheet(file) {
 }
 
 // ══ RENDERING ════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const BADGE_MAP = {
   SHORT_TERM:   ['b-short-term',   '⚠️ SHORT TERM',        'Less than 7 years remaining — review before outreach'],
   PMI_GONE:     ['b-pmi-gone',     '✅ PMI GONE',           'Refi eliminates PMI — include in savings'],
@@ -1105,13 +1115,13 @@ function renderCard(c) {
     : `${c.breakevenMonths} mo breakeven`;
 
   const addrHTML = c.address
-    ? `<span class="addr">${c.address}</span>`
+    ? `<span class="addr">${esc(c.address)}</span>`
     : `<span class="addr-missing">[Address]</span>`;
 
   return `
 <div class="${classes.join(' ')}" id="card-${c.id}" data-id="${c.id}">
   <div class="cr1">
-    <div class="c-borrower${isCtd ? ' struck' : ''}" id="name-${c.id}">${c.borrower || '—'}</div>
+    <div class="c-borrower${isCtd ? ' struck' : ''}" id="name-${c.id}">${esc(c.borrower) || '—'}</div>
     <div class="badge-group">${renderBadges(c.flags)}</div>
   </div>
   <div class="cr2">
@@ -1125,7 +1135,7 @@ function renderCard(c) {
     📞 ${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : '—'}
     &nbsp;|&nbsp;
     ✉️ ${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}<br>
-    ${c.loanType} · ${c.loanProg} &nbsp;|&nbsp; Closed: ${fmtDate(c.closingDate)} &nbsp;|&nbsp; FICO: ${c.origFico || '—'}<br>
+    ${esc(c.loanType)} · ${esc(c.loanProg)} &nbsp;|&nbsp; Closed: ${fmtDate(c.closingDate)} &nbsp;|&nbsp; FICO: ${esc(c.origFico) || '—'}<br>
     ${addrHTML}
   </div>
   <div class="cr5"></div>
@@ -1295,6 +1305,11 @@ function handleGenClick(cid) {
     c.currentMessage = null;
     c.conversationHistory = [];
   } else {
+    if (!apiKey) {
+      panel.classList.add('open');
+      panel.innerHTML = `<div class="txt-error">Paste your Anthropic API key in the field above before generating text.</div>`;
+      return;
+    }
     generateText(cid);
   }
 }
