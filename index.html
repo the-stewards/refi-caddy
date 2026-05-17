@@ -903,7 +903,7 @@ function checkPassword() {
 // ══ CONFIG ═══════════════════════════════════════════════════════════
 const CLOSING_COSTS = 3500;
 const API_URL       = 'https://api.anthropic.com/v1/messages';
-const MODEL         = 'claude-sonnet-4-20250514';
+const MODEL         = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `You write short, casual text messages from a mortgage loan officer to a past client. \
 The messages should sound exactly like a real human texting a friend — not a business, \
@@ -1295,9 +1295,9 @@ async function generateText(cid) {
   let text = null;
   for (let i = 0; i < 2; i++) {
     try { text = await callAPI(messages); break; }
-    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; } }
+    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; } }
   }
-  if (!text) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; }
+  if (!text) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; }
   c.conversationHistory = [{ role: 'user', content: userMsg }, { role: 'assistant', content: text }];
   c.currentMessage = text;
   renderTextPanel(c);
@@ -1312,9 +1312,9 @@ async function remixText(cid) {
   let text = null;
   for (let i = 0; i < 2; i++) {
     try { text = await callAPI(messages); break; }
-    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; } }
+    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; } }
   }
-  if (!text) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; }
+  if (!text) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; }
   c.conversationHistory = [...messages, { role: 'assistant', content: text }];
   c.currentMessage = text;
   renderTextPanel(c);
