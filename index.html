@@ -760,6 +760,80 @@
       padding: 14px;
     }
 
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 24px;
+      background: #f5f0e8;
+      border-bottom: 1px solid var(--mid-gray);
+      flex-wrap: wrap;
+    }
+    .filter-search {
+      flex: 1;
+      min-width: 180px;
+      padding: 8px 14px;
+      border: 1.5px solid var(--mid-gray);
+      border-radius: 4px;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 15px;
+      color: var(--charcoal);
+      background: white;
+      outline: none;
+    }
+    .filter-search:focus { border-color: var(--orange); }
+    .filter-type {
+      display: flex;
+      border: 1.5px solid var(--mid-gray);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .filter-type-btn {
+      background: white;
+      border: none;
+      padding: 8px 14px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      color: #888;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .filter-type-btn.active { background: var(--charcoal); color: var(--cream); }
+    .btn-hide-ctd {
+      background: white;
+      border: 1.5px solid var(--mid-gray);
+      border-radius: 4px;
+      padding: 8px 14px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      color: #888;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .btn-hide-ctd.active { background: var(--charcoal); border-color: var(--charcoal); color: var(--cream); }
+    .hide-contacted .c-card.contacted { display: none; }
+    .c-equity-line {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: var(--orange);
+      margin-top: 4px;
+    }
+    .bkt-count {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 18px;
+      color: #aaa;
+      margin-left: 6px;
+    }
+
     .skipped-notice {
       font-family: 'Frank Ruhl Libre', serif;
       font-weight: 300;
@@ -862,6 +936,18 @@
     <div class="sum-stat"><div class="sum-num" id="s-pmi">—</div><div class="sum-label">PMI Eliminations</div></div>
   </div>
 
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <input class="filter-search" id="filter-search" type="text" placeholder="Search by name…" oninput="filterClients()">
+    <div class="filter-type">
+      <button class="filter-type-btn active" id="ft-all"  onclick="setTypeFilter('ALL')">ALL</button>
+      <button class="filter-type-btn"        id="ft-conv" onclick="setTypeFilter('CONV')">CONV</button>
+      <button class="filter-type-btn"        id="ft-fha"  onclick="setTypeFilter('FHA')">FHA</button>
+    </div>
+    <button class="btn-hide-ctd" id="btn-hide-ctd" onclick="toggleHideContacted()">HIDE CONTACTED</button>
+  </div>
+
+  <!-- Bucket Sections -->
   <div class="results-main" id="results-main"></div>
 
 </div>
@@ -1029,6 +1115,7 @@ function calculateClient(row, idx) {
     phone: String(row['Borrower Phone'] || ''), email: String(row['Borrower Email'] || ''),
     address: String(row['Address'] || '').trim(), origFico: String(row['Orig. FICO'] || ''),
     loanType, loanProg, closingDate, currentRate, newRate, origLTV, ltvEst,
+    upb, propValue,
     currentPI, newPI, piSavings, pmiSavings, totalSavings, breakevenMonths,
     rateDelta, remainingTerm, flags, inRateAndTerm, inEquity, isDoubleDip,
     conversationHistory: [], currentMessage: null,
@@ -1152,8 +1239,19 @@ function renderCard(c) {
     ? `<span class="addr">${esc(c.address)}</span>`
     : `<span class="addr-missing">[Address]</span>`;
 
+  const loanCtx = `${esc(c.loanType)} · ${esc(c.loanProg)}`;
+
+  // Equity dollar line — show accessible cash-out at 80% CLTV
+  let equityHTML = '';
+  if (c.inEquity && c.upb > 0 && c.ltvEst > 0) {
+    const propVal   = c.propValue > 0 ? c.propValue : (c.upb * 100 / c.ltvEst);
+    const maxCash   = Math.round(propVal * 0.80 - c.upb);
+    const totEquity = Math.round(propVal - c.upb);
+    if (maxCash > 0) equityHTML = `<div class="c-equity-line">~${fmt$(maxCash)} ACCESSIBLE &nbsp;·&nbsp; ${fmt$(totEquity)} TOTAL EQUITY</div>`;
+  }
+
   return `
-<div class="${classes.join(' ')}" id="card-${c.id}" data-id="${c.id}">
+<div class="${classes.join(' ')}" id="card-${c.id}" data-id="${c.id}" data-name="${esc(c.borrower.toLowerCase())}" data-type="${esc(c.loanType)}">
   <div class="cr1">
     <div class="c-borrower${isCtd ? ' struck' : ''}" id="name-${c.id}">${esc(c.borrower) || '—'}</div>
     <div class="badge-group">${renderBadges(c.flags)}</div>
@@ -1165,6 +1263,7 @@ function renderCard(c) {
     <span class="c-rates-muted">${fmtR(c.currentRate)} → ${fmtR(c.newRate)}</span>
   </div>
   <div class="cr3">${getCoachingNote(c)}</div>
+  ${equityHTML}
   <div class="cr4">
     📞 ${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : '—'}
     &nbsp;|&nbsp;
@@ -1190,7 +1289,7 @@ function renderCard(c) {
 function renderBucket(emoji, label, headline, hlWord, sub, clients, bucketCls, collapsed) {
   if (!clients.length) return '';
   const cards        = clients.map(renderCard).join('');
-  const headlineHTML = headline.replace(hlWord, `<span class="hl">${hlWord}</span>`);
+  const headlineHTML = headline.replace(hlWord, `<span class="hl">${hlWord}</span>`) + `<span class="bkt-count">(${clients.length})</span>`;
   if (collapsed) {
     return `
 <div class="bucket-section ${bucketCls}">
@@ -1389,12 +1488,51 @@ function toggleNotYet() {
 }
 
 function resetUpload() {
-  allClients   = [];
-  contactedIds = new Set();
+  allClients = [];
+  // contactedIds preserved so team doesn't lose progress across sheet reloads
   document.getElementById('screen-upload').style.display  = 'flex';
   document.getElementById('screen-results').style.display = 'none';
   document.getElementById('file-input').value = '';
   document.getElementById('up-error').style.display = 'none';
+  // Reset filters
+  activeTypeFilter = 'ALL';
+  const si = document.getElementById('filter-search');
+  if (si) si.value = '';
+  ['ALL','CONV','FHA'].forEach(k => {
+    document.getElementById(`ft-${k.toLowerCase()}`)?.classList.toggle('active', k === 'ALL');
+  });
+  const main = document.getElementById('results-main');
+  if (main) main.classList.remove('hide-contacted');
+  const btn = document.getElementById('btn-hide-ctd');
+  if (btn) { btn.classList.remove('active'); btn.textContent = 'HIDE CONTACTED'; }
+}
+
+// ══ FILTER & VIEW CONTROLS ════════════════════════════════════════════
+let activeTypeFilter = 'ALL';
+
+function filterClients() {
+  const term = (document.getElementById('filter-search')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('.c-card').forEach(card => {
+    const nameOk = !term || (card.dataset.name || '').includes(term);
+    const typeOk = activeTypeFilter === 'ALL' || card.dataset.type === activeTypeFilter;
+    card.style.display = (nameOk && typeOk) ? '' : 'none';
+  });
+}
+
+function setTypeFilter(t) {
+  activeTypeFilter = t;
+  ['ALL','CONV','FHA'].forEach(k => {
+    document.getElementById(`ft-${k.toLowerCase()}`)?.classList.toggle('active', k === t);
+  });
+  filterClients();
+}
+
+function toggleHideContacted() {
+  const btn  = document.getElementById('btn-hide-ctd');
+  const main = document.getElementById('results-main');
+  const on   = main.classList.toggle('hide-contacted');
+  btn.classList.toggle('active', on);
+  btn.textContent = on ? 'SHOW CONTACTED' : 'HIDE CONTACTED';
 }
 
 // ══ FILE HANDLING ════════════════════════════════════════════════════
