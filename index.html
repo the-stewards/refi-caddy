@@ -577,6 +577,7 @@
     .b-fha-conv     { background: var(--blue);     color: white; }
     .b-no-savings   { background: var(--red);      color: white; }
     .b-default-term { background: none; border: 1.5px solid var(--amber); color: var(--amber); }
+    .b-double-dip   { background: var(--orange); color: white; }
 
     .cr2 {
       display: flex;
@@ -1018,19 +1019,10 @@ function calculateClient(row, idx) {
   if (totalSavings <= 0)                                                  flags.push('NO_SAVINGS');
   if (isDefault)                                                          flags.push('DEFAULT_TERM');
 
-  let bucket;
-  if (totalSavings <= 0 || breakevenMonths === null) {
-    bucket = 'notYet';
-  } else if (totalSavings > 300 && breakevenMonths <= 18) {
-    bucket = 'actToday';
-  } else if (
-    (totalSavings >= 150 && totalSavings <= 300) ||
-    (breakevenMonths >= 19 && breakevenMonths <= 36)
-  ) {
-    bucket = 'worthALook';
-  } else {
-    bucket = 'notYet';
-  }
+  const inRateAndTerm = totalSavings > 0;
+  const inEquity      = ltvEst > 0 && ltvEst <= 60;
+  const isDoubleDip   = inRateAndTerm && inEquity;
+  if (isDoubleDip) flags.push('DOUBLE_DIP');
 
   return {
     id: 'c' + idx, borrower, loanNumber: String(row['Loan Number'] || ''),
@@ -1038,7 +1030,7 @@ function calculateClient(row, idx) {
     address: String(row['Address'] || '').trim(), origFico: String(row['Orig. FICO'] || ''),
     loanType, loanProg, closingDate, currentRate, newRate, origLTV, ltvEst,
     currentPI, newPI, piSavings, pmiSavings, totalSavings, breakevenMonths,
-    rateDelta, remainingTerm, flags, bucket,
+    rateDelta, remainingTerm, flags, inRateAndTerm, inEquity, isDoubleDip,
     conversationHistory: [], currentMessage: null,
   };
 }
@@ -1053,6 +1045,10 @@ function getCoachingNote(c) {
     return 'They may not know PMI has dropped off. Great opening line.';
   if (c.remainingTerm < 84)
     return 'Less than 7 years left — lead with breakeven, let them do the math.';
+  if (c.inEquity && !c.inRateAndTerm)
+    return `Strong equity position (${c.ltvEst.toFixed(0)}% LTV) — cash-out could consolidate debts not visible here.`;
+  if (c.isDoubleDip)
+    return `Rate savings AND strong equity — lead with the monthly drop, mention cash-out as an option.`;
   if (c.piSavings > 400)
     return "Big savings — let the number speak first. Don't over-explain.";
   if (c.breakevenMonths !== null && c.breakevenMonths <= 12)
@@ -1064,11 +1060,12 @@ function getCoachingNote(c) {
 
 // ══ BUCKETING ════════════════════════════════════════════════════════
 function bucketClients(clients) {
-  const by$ = (a, b) => b.totalSavings - a.totalSavings;
+  const by$      = (a, b) => b.totalSavings - a.totalSavings;
+  const byEquity = (a, b) => a.ltvEst - b.ltvEst;
   return {
-    actToday:   clients.filter(c => c.bucket === 'actToday').sort(by$),
-    worthALook: clients.filter(c => c.bucket === 'worthALook').sort(by$),
-    notYet:     clients.filter(c => c.bucket === 'notYet').sort(by$),
+    rateAndTerm: clients.filter(c => c.inRateAndTerm).sort(by$),
+    equity:      clients.filter(c => c.inEquity).sort(byEquity),
+    checkBack:   clients.filter(c => !c.inRateAndTerm && !c.inEquity).sort(by$),
   };
 }
 
@@ -1117,6 +1114,7 @@ const BADGE_MAP = {
   FHA_CONV:     ['b-fha-conv',     '🔵 FHA → CONV',         'Eligible for conventional refi — eliminates MIP'],
   NO_SAVINGS:   ['b-no-savings',   '🔴 NO SAVINGS',          'No savings at today\'s rates'],
   DEFAULT_TERM: ['b-default-term', '📋 DEFAULT TERM',        'Term assumed 30yr — verify'],
+  DOUBLE_DIP:   ['b-double-dip',   '💰 DOUBLE DIP',           'Qualifies for both rate & term AND cash-out equity'],
 };
 
 function renderBadges(flags) {
@@ -1138,8 +1136,6 @@ function renderCard(c) {
   const isCtd     = contactedIds.has(c.id);
   const noSavings = c.flags.includes('NO_SAVINGS');
   const classes   = ['c-card'];
-  if (c.bucket === 'worthALook') classes.push('worth-a-look');
-  if (c.bucket === 'notYet')     classes.push('not-yet-card');
   if (c.flags.includes('SHORT_TERM')) classes.push('short-term');
   if (noSavings)   classes.push('no-savings-bg');
   if (isCtd)       classes.push('contacted');
@@ -1236,12 +1232,15 @@ function renderResults(buckets, convRate, fhaRate, skipped) {
   document.getElementById('hc-ctd').textContent   = contactedIds.size;
 
   let html = '';
-  html += renderBucket('🔥','ACT TODAY','STRONGEST CASES TODAY','STRONGEST',
-    'These clients have the strongest case today.', buckets.actToday, 'bkt-act-today', false);
-  html += renderBucket('👀','WORTH A LOOK','WORTH THE CONVERSATION','CONVERSATION',
-    'Worth the conversation — let the math do the work.', buckets.worthALook, 'bkt-worth-a-look', false);
-  html += renderBucket('🕐','NOT YET','CHECK BACK WHEN RATES MOVE','RATES',
-    'Check back when rates move.', buckets.notYet, 'bkt-not-yet', true);
+  html += renderBucket('📉','RATE & TERM','RATE & TERM OPPORTUNITY','OPPORTUNITY',
+    `${buckets.rateAndTerm.length} client${buckets.rateAndTerm.length !== 1 ? 's' : ''} with positive savings — ranked by monthly savings.`,
+    buckets.rateAndTerm, 'bkt-act-today', false);
+  html += renderBucket('🏠','EQUITY OPPORTUNITY','OUTSIZED EQUITY POSITION','EQUITY',
+    `${buckets.equity.length} client${buckets.equity.length !== 1 ? 's' : ''} with 40%+ equity — cash-out potential to consolidate debt. Ranked by most equity first.`,
+    buckets.equity, 'bkt-worth-a-look', false);
+  html += renderBucket('🕐','CHECK BACK LATER','CHECK BACK WHEN RATES MOVE','RATES',
+    'No rate savings and ordinary equity today.',
+    buckets.checkBack, 'bkt-not-yet', true);
   if (skipped > 0) html += `<p class="skipped-notice">${skipped} row${skipped !== 1 ? 's' : ''} skipped — missing required data.</p>`;
 
   document.getElementById('results-main').innerHTML = html;
