@@ -1295,7 +1295,7 @@ async function generateText(cid) {
   let text = null;
   for (let i = 0; i < 2; i++) {
     try { text = await callAPI(messages); break; }
-    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; } }
+    catch (err) { if (i === 1) { panel.innerHTML = `<div class="txt-error">${err.message || 'API error'}</div>`; return; } }
   }
   if (!text) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; }
   c.conversationHistory = [{ role: 'user', content: userMsg }, { role: 'assistant', content: text }];
@@ -1312,7 +1312,7 @@ async function remixText(cid) {
   let text = null;
   for (let i = 0; i < 2; i++) {
     try { text = await callAPI(messages); break; }
-    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; } }
+    catch (err) { if (i === 1) { panel.innerHTML = `<div class="txt-error">${err.message || 'API error'}</div>`; return; } }
   }
   if (!text) { panel.innerHTML = `<div class="txt-error">API error — check connection and try again</div>`; return; }
   c.conversationHistory = [...messages, { role: 'assistant', content: text }];
