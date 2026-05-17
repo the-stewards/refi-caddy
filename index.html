@@ -951,6 +951,11 @@ function monthsElapsedSince(date) {
 function resolveDate(val) {
   if (!val) return null;
   if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  // Excel serial date numbers (e.g. 45264 = late 2023) — convert to JS Date
+  if (typeof val === 'number' && val > 1000) {
+    const d = new Date((val - 25569) * 86400000);
+    return isNaN(d.getTime()) ? null : d;
+  }
   const d = new Date(val);
   return isNaN(d.getTime()) ? null : d;
 }
