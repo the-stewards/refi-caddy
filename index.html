@@ -1115,7 +1115,7 @@ function calculateClient(row, idx) {
   if (pmiSavings > 0)                                                     flags.push('PMI_GONE');
   if (loanType === 'CONV' && origLTV > 80 && ltvEst < 80 && currentPMI === 0) flags.push('PMI_CLEARED');
   if (loanType === 'FHA' && ltvEst < 80)                                  flags.push('FHA_CONV');
-  if (totalSavings <= 0)                                                  flags.push('NO_SAVINGS');
+  if (totalSavings <= 0 && !inEquity)                                     flags.push('NO_SAVINGS');
   if (isDefault)                                                          flags.push('DEFAULT_TERM');
 
   const inRateAndTerm = totalSavings > 0;
@@ -1233,16 +1233,26 @@ function fmtDate(d) {
 }
 
 function renderCard(c) {
-  const isCtd     = contactedIds.has(c.id);
-  const noSavings = c.flags.includes('NO_SAVINGS');
-  const classes   = ['c-card'];
+  const isCtd      = contactedIds.has(c.id);
+  const noSavings  = c.flags.includes('NO_SAVINGS');
+  const equityOnly = c.inEquity && !c.inRateAndTerm;
+  const classes    = ['c-card'];
   if (c.flags.includes('SHORT_TERM')) classes.push('short-term');
   if (noSavings)   classes.push('no-savings-bg');
   if (isCtd)       classes.push('contacted');
 
-  const savingsHTML = noSavings
-    ? `<span class="c-no-sav">No savings</span>`
-    : `<span class="c-savings">${fmt$(c.totalSavings)}/mo</span>`;
+  let savingsHTML;
+  if (equityOnly) {
+    const propVal = c.propValue > 0 ? c.propValue : (c.upb > 0 && c.ltvEst > 0 ? c.upb * 100 / c.ltvEst : 0);
+    const maxCash = propVal > 0 ? Math.round(propVal * 0.80 - c.upb) : 0;
+    savingsHTML = maxCash > 0
+      ? `<span class="c-savings">${fmt$(maxCash)}</span><span class="c-breakeven"> accessible equity</span>`
+      : `<span class="c-savings">${c.ltvEst.toFixed(0)}% LTV</span>`;
+  } else if (noSavings) {
+    savingsHTML = `<span class="c-no-sav">No savings</span>`;
+  } else {
+    savingsHTML = `<span class="c-savings">${fmt$(c.totalSavings)}/mo</span>`;
+  }
 
   const beDisplay = (!c.breakevenMonths || c.breakevenMonths > 84)
     ? '7+ yr breakeven'
@@ -1271,9 +1281,9 @@ function renderCard(c) {
   </div>
   <div class="cr2">
     ${savingsHTML}
-    ${!noSavings ? `<span class="c-rate-drop">↓ ${fmtR(c.rateDelta)}</span>` : ''}
-    ${!noSavings ? `<span class="c-breakeven">${beDisplay}</span>` : ''}
-    <span class="c-rates-muted">${fmtR(c.currentRate)} → ${fmtR(c.newRate)}</span>
+    ${!noSavings && !equityOnly ? `<span class="c-rate-drop">↓ ${fmtR(c.rateDelta)}</span>` : ''}
+    ${!noSavings && !equityOnly ? `<span class="c-breakeven">${beDisplay}</span>` : ''}
+    ${!equityOnly ? `<span class="c-rates-muted">${fmtR(c.currentRate)} → ${fmtR(c.newRate)}</span>` : ''}
   </div>
   <div class="cr3">${getCoachingNote(c)}</div>
   ${equityHTML}
@@ -1287,7 +1297,7 @@ function renderCard(c) {
   <div class="cr5"></div>
   <div class="cr6">
     <button class="btn-gen" id="btn-gen-${c.id}" onclick="handleGenClick('${c.id}')"
-      ${noSavings ? 'disabled title="No savings — text generation disabled"' : ''}>
+      ${noSavings && !equityOnly ? 'disabled title="No savings — text generation disabled"' : ''}>
       GENERATE TEXT
     </button>
     <button class="btn-ctd${isCtd ? ' active' : ''}" id="btn-ctd-${c.id}"
