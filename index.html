@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Refi Caddy — The Stewards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&family=Frank+Ruhl+Libre:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --charcoal: #403d3d;
+      --orange:   #f76732;
+      --cream:    #fffae8;
+      --mid-gray: #dddddd;
+      --amber:    #f5a623;
+      --green:    #2d8a4e;
+      --blue:     #4a90d9;
+      --red:      #c0392b;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Frank Ruhl Libre', serif;
+      background: var(--cream);
+      color: var(--charcoal);
+      min-height: 100vh;
+    }
+
+    /* ── PASSWORD GATE ──────────────────────────────────────────── */
+    #screen-password {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--cream);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+
+    .pw-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      letter-spacing: 0.3em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .pw-h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: clamp(38px, 6vw, 72px);
+      color: var(--charcoal);
+      line-height: 1;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .pw-h1 .hl { color: var(--orange); }
+
+    .pw-divider {
+      width: 60px;
+      height: 2px;
+      background: var(--orange);
+      margin-bottom: 20px;
+    }
+
+    .pw-subhead {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 18px;
+      color: #555;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .pw-form {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pw-field label {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .pw-field input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--mid-gray);
+      border-radius: 4px;
+      background: white;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 18px;
+      color: var(--charcoal);
+      outline: none;
+      letter-spacing: 0.2em;
+      transition: border-color 0.2s;
+    }
+    .pw-field input:focus { border-color: var(--orange); }
+    .pw-field input.pw-shake {
+      animation: shake 0.4s ease;
+      border-color: var(--red);
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-8px); }
+      40%      { transform: translateX(8px); }
+      60%      { transform: translateX(-5px); }
+      80%      { transform: translateX(5px); }
+    }
+
+    .btn-pw-enter {
+      background: var(--orange);
+      color: var(--cream);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      padding: 16px;
+      min-height: 52px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      width: 100%;
+    }
+    .btn-pw-enter:hover { opacity: 0.85; }
+
+    .pw-error {
+      color: var(--red);
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      font-style: italic;
+      text-align: center;
+      min-height: 22px;
+    }
+
+    /* ── UPLOAD SCREEN ──────────────────────────────────────────── */
+    #screen-upload {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+    }
+
+    .up-eyebrow {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      letter-spacing: 0.3em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .up-h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: clamp(38px, 6vw, 72px);
+      color: var(--charcoal);
+      line-height: 1;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .up-h1 .hl { color: var(--orange); }
+
+    .up-divider {
+      width: 60px;
+      height: 2px;
+      background: var(--orange);
+      margin-bottom: 20px;
+    }
+
+    .up-subhead {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 18px;
+      color: #555;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .api-key-wrap {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 20px;
+    }
+    .api-key-wrap label {
+      display: block;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .api-key-wrap input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--mid-gray);
+      border-radius: 4px;
+      background: white;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 16px;
+      color: var(--charcoal);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .api-key-wrap input:focus { border-color: var(--orange); }
+
+    .drop-zone {
+      width: 100%;
+      max-width: 480px;
+      border: 2px dashed var(--orange);
+      border-radius: 8px;
+      background: var(--charcoal);
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 16px;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over { background: #504d4d; }
+    .drop-zone-icon { font-size: 40px; margin-bottom: 14px; }
+    .drop-zone-text {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 18px;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+    .drop-zone-hint {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #aaa;
+    }
+
+    .btn-upload {
+      background: var(--orange);
+      color: var(--cream);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      padding: 16px 48px;
+      min-height: 52px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-upload:hover { opacity: 0.85; }
+
+    #file-input { display: none; }
+
+    .up-error {
+      margin-top: 16px;
+      color: var(--red);
+      font-size: 16px;
+      text-align: center;
+      max-width: 480px;
+    }
+
+    /* ── RESULTS SCREEN ─────────────────────────────────────────── */
+    #screen-results { display: none; background: var(--cream); min-height: 100vh; }
+
+    /* Header */
+    .hdr {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--charcoal);
+      color: var(--cream);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      gap: 12px;
+    }
+
+    .hdr-left {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .hdr-brand { color: var(--cream); }
+    .hdr-sep   { color: #555; }
+    .hdr-date  { color: #aaa; font-weight: 400; font-size: 14px; }
+
+    .hdr-center {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+    }
+    .hdr-center .val   { color: var(--cream); font-weight: 700; font-size: 16px; }
+    .hdr-center .c-val { color: #4db87a;      font-weight: 700; font-size: 16px; }
+
+    .hdr-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .sender-toggle {
+      display: flex;
+      border: 1.5px solid #666;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .sender-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      padding: 6px 16px;
+      cursor: pointer;
+      min-height: 38px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .sender-btn.active { background: var(--orange); color: var(--cream); }
+
+    .btn-new-sheet {
+      background: none;
+      border: 1.5px solid #666;
+      color: #aaa;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 38px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-new-sheet:hover { border-color: var(--cream); color: var(--cream); }
+
+    /* Rate Banner */
+    .rate-banner {
+      background: var(--charcoal);
+      border-left: 4px solid var(--orange);
+      padding: 14px 24px;
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .rate-banner-rates {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--cream);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .rate-banner-rates .rl {
+      font-weight: 400;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .rate-banner-sub {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #999;
+    }
+
+    /* Summary Strip */
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--mid-gray);
+    }
+    .sum-stat {
+      padding: 20px 24px;
+      text-align: center;
+      border-right: 1px solid var(--mid-gray);
+    }
+    .sum-stat:last-child { border-right: none; }
+    .sum-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 38px;
+      color: var(--orange);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .sum-label {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #888;
+    }
+
+    /* Results main */
+    .results-main {
+      padding: 36px 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Bucket Section */
+    .bucket-section { margin-bottom: 52px; }
+
+    .bkt-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .bkt-headline {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--charcoal);
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .bkt-headline .hl { color: var(--orange); }
+    .bkt-sub {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #888;
+      margin-bottom: 22px;
+    }
+
+    .bkt-act-today .bkt-label   { color: var(--charcoal); }
+    .bkt-act-today .bkt-headline { color: var(--charcoal); }
+    .bkt-worth-a-look .bkt-label { color: var(--charcoal); }
+    .bkt-not-yet .bkt-label    { color: #aaa; }
+    .bkt-not-yet .bkt-headline { color: #888; }
+    .bkt-not-yet .bkt-sub      { color: #aaa; }
+    .bkt-not-yet .hl           { color: #aaa; }
+
+    .btn-expand {
+      background: none;
+      border: 1.5px solid var(--mid-gray);
+      color: #888;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      padding: 14px 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 50px;
+      transition: border-color 0.2s, color 0.2s;
+      display: block;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .btn-expand:hover { border-color: var(--charcoal); color: var(--charcoal); }
+
+    .not-yet-cards { display: none; }
+    .not-yet-cards.open { display: block; }
+
+    /* Card Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── CLIENT CARD ────────────────────────────────────────────── */
+    .c-card {
+      background: white;
+      border-radius: 6px;
+      border-left: 3px solid var(--orange);
+      padding: 20px;
+      transition: opacity 0.3s;
+    }
+    .c-card.worth-a-look  { background: #fffae8; border-left-color: var(--charcoal); }
+    .c-card.not-yet-card  { background: #f5f5f5; border-left-color: #bbb; }
+    .c-card.short-term    { border-left-color: var(--amber) !important; }
+    .c-card.no-savings-bg { background: #fff5f5; }
+    .c-card.contacted     { opacity: 0.4; }
+
+    .cr1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .c-borrower {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: var(--charcoal);
+      line-height: 1.1;
+    }
+    .c-borrower.struck { text-decoration: line-through; }
+
+    .badge-group { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+    .badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 3px;
+      white-space: nowrap;
+      cursor: help;
+    }
+    .b-short-term   { background: var(--amber);    color: white; }
+    .b-pmi-gone     { background: var(--green);    color: var(--cream); }
+    .b-pmi-cleared  { background: #ccc;            color: #555; }
+    .b-fha-conv     { background: var(--blue);     color: white; }
+    .b-no-savings   { background: var(--red);      color: white; }
+    .b-default-term { background: none; border: 1.5px solid var(--amber); color: var(--amber); }
+
+    .cr2 {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .c-savings {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--orange);
+      line-height: 1;
+    }
+    .c-no-sav {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      color: #bbb;
+    }
+    .c-rate-drop {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--charcoal);
+    }
+    .c-breakeven {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: var(--charcoal);
+    }
+    .c-rates-muted {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #999;
+    }
+
+    .cr3 {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #888;
+      font-style: italic;
+      line-height: 1.45;
+      border-left: 2px solid var(--mid-gray);
+      padding: 6px 12px;
+      margin-bottom: 12px;
+    }
+
+    .cr4 {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      color: #888;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+    .cr4 a { color: #888; text-decoration: none; }
+    .cr4 a:hover { color: var(--orange); text-decoration: underline; }
+    .cr4 .addr { font-style: italic; }
+    .cr4 .addr-missing { color: var(--orange); font-style: italic; }
+
+    .cr5 { height: 1px; background: var(--mid-gray); margin-bottom: 14px; }
+
+    .cr6 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .btn-gen {
+      background: var(--orange);
+      color: var(--cream);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 22px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: opacity 0.2s;
+    }
+    .btn-gen:hover { opacity: 0.85; }
+    .btn-gen:disabled {
+      background: var(--mid-gray);
+      color: #999;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    .btn-ctd {
+      background: none;
+      border: 1.5px solid var(--charcoal);
+      color: var(--charcoal);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s;
+    }
+    .btn-ctd.active { background: var(--green); border-color: var(--green); color: white; }
+
+    .txt-panel { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--mid-gray); }
+    .txt-panel.open { display: block; }
+
+    .txt-loading {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 18px;
+      font-style: italic;
+      color: #888;
+      text-align: center;
+      padding: 24px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .txt-msg {
+      background: var(--cream);
+      border-radius: 4px;
+      padding: 16px;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 400;
+      font-size: 18px;
+      color: var(--charcoal);
+      line-height: 1.65;
+      margin-bottom: 12px;
+    }
+
+    .txt-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+    .btn-remix {
+      background: none;
+      border: 1.5px solid var(--charcoal);
+      color: var(--charcoal);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      padding: 10px 22px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.2s;
+    }
+    .btn-remix:hover { background: var(--charcoal); color: var(--cream); }
+
+    .btn-copy {
+      background: var(--orange);
+      color: var(--cream);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: background 0.2s;
+    }
+    .btn-copy.copied { background: var(--green); }
+
+    .txt-error {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 16px;
+      font-style: italic;
+      color: var(--red);
+      text-align: center;
+      padding: 14px;
+    }
+
+    .skipped-notice {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 300;
+      font-size: 16px;
+      font-style: italic;
+      color: #aaa;
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    /* ── MOBILE ─────────────────────────────────────────────────── */
+    @media (max-width: 767px) {
+      .hdr { height: auto; padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+      .hdr-center { display: none; }
+      .hdr-sep, .hdr-date { display: none; }
+
+      .rate-banner { flex-direction: column; gap: 4px; padding: 12px 16px; }
+
+      .summary-strip { grid-template-columns: repeat(2, 1fr); }
+      .sum-stat { border-right: none; border-bottom: 1px solid var(--mid-gray); }
+      .sum-stat:nth-child(odd)  { border-right: 1px solid var(--mid-gray); }
+      .sum-stat:last-child      { border-bottom: none; }
+
+      .results-main { padding: 20px 16px; }
+      .card-grid    { grid-template-columns: 1fr; }
+      .cr2          { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ PASSWORD GATE ════════════════════════════════════════════ -->
+<div id="screen-password">
+  <p class="pw-eyebrow">Internal Tool — The Stewards</p>
+  <h1 class="pw-h1">REFI <span class="hl">CADDY</span></h1>
+  <div class="pw-divider"></div>
+  <p class="pw-subhead">Team access only.</p>
+  <div class="pw-form">
+    <div class="pw-field">
+      <label for="pw-input">Password</label>
+      <input type="password" id="pw-input" placeholder="••••••••••"
+        autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') checkPassword()">
+    </div>
+    <button class="btn-pw-enter" onclick="checkPassword()">ENTER</button>
+    <p class="pw-error" id="pw-error"></p>
+  </div>
+</div>
+
+<!-- ══ SCREEN 1 — UPLOAD ═════════════════════════════════════════ -->
+<div id="screen-upload" style="display:none">
+  <p class="up-eyebrow">Internal Tool — The Stewards</p>
+  <h1 class="up-h1">REFI <span class="hl">CADDY</span></h1>
+  <div class="up-divider"></div>
+  <p class="up-subhead">Upload today's enriched Ruoff sheet to see who's ready.</p>
+
+  <div class="api-key-wrap">
+    <label for="api-key-input">Anthropic API Key</label>
+    <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+  </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-zone-icon">📊</div>
+    <p class="drop-zone-text">Drag your sheet here or click to upload</p>
+    <p class="drop-zone-hint">.xlsx files only</p>
+  </div>
+
+  <button class="btn-upload" id="btn-upload-trigger">UPLOAD SHEET</button>
+  <input type="file" id="file-input" accept=".xlsx">
+  <p class="up-error" id="up-error" style="display:none"></p>
+</div>
+
+<!-- ══ SCREEN 2 — RESULTS ════════════════════════════════════════ -->
+<div id="screen-results">
+
+  <div class="hdr">
+    <div class="hdr-left">
+      <span class="hdr-brand">REFI CADDY</span>
+      <span class="hdr-sep">·</span>
+      <span class="hdr-date" id="hdr-date"></span>
+    </div>
+    <div class="hdr-center">
+      <span class="val" id="hc-total">0</span> CLIENTS &nbsp;·&nbsp;
+      <span class="val" id="hc-pos">0</span> IN POSITION &nbsp;·&nbsp;
+      <span class="c-val" id="hc-ctd">0</span> CONTACTED TODAY
+    </div>
+    <div class="hdr-right">
+      <div class="sender-toggle">
+        <button class="sender-btn active" id="btn-ryan"  onclick="toggleSender('Ryan')">RYAN</button>
+        <button class="sender-btn"        id="btn-chris" onclick="toggleSender('Chris')">CHRIS</button>
+      </div>
+      <button class="btn-new-sheet" onclick="resetUpload()">↑ NEW SHEET</button>
+    </div>
+  </div>
+
+  <div class="rate-banner">
+    <div class="rate-banner-rates" id="rate-banner-rates"></div>
+    <div class="rate-banner-sub">These savings are based on today's estimates. Rates change daily.</div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="sum-stat"><div class="sum-num" id="s-pos">—</div><div class="sum-label">Clients In Position</div></div>
+    <div class="sum-stat"><div class="sum-num" id="s-avg">—</div><div class="sum-label">Avg Monthly Savings</div></div>
+    <div class="sum-stat"><div class="sum-num" id="s-top">—</div><div class="sum-label">Highest Savings</div></div>
+    <div class="sum-stat"><div class="sum-num" id="s-pmi">—</div><div class="sum-label">PMI Eliminations</div></div>
+  </div>
+
+  <div class="results-main" id="results-main"></div>
+
+</div>
+
+<script>
+// ══ TEAM PASSWORD — change this to update access ═══════════════════
+const TEAM_PASSWORD = 'stewards2026';
+
+// ══ PASSWORD GATE ════════════════════════════════════════════════════
+(function() {
+  if (sessionStorage.getItem('rc-auth') === '1') {
+    document.getElementById('screen-password').style.display = 'none';
+    document.getElementById('screen-upload').style.display   = 'flex';
+  }
+  // else: password screen is already visible, upload screen is hidden
+})();
+
+function checkPassword() {
+  const input = document.getElementById('pw-input').value;
+  if (input === TEAM_PASSWORD) {
+    sessionStorage.setItem('rc-auth', '1');
+    document.getElementById('screen-password').style.display = 'none';
+    document.getElementById('screen-upload').style.display   = 'flex';
+  } else {
+    const field = document.getElementById('pw-input');
+    const err   = document.getElementById('pw-error');
+    err.textContent = 'Wrong password — try again.';
+    field.value = '';
+    field.classList.remove('pw-shake');
+    void field.offsetWidth; // reflow to restart animation
+    field.classList.add('pw-shake');
+    field.addEventListener('animationend', () => field.classList.remove('pw-shake'), { once: true });
+    field.focus();
+  }
+}
+
+// ══ CONFIG ═══════════════════════════════════════════════════════════
+const CLOSING_COSTS = 3500;
+const API_URL       = 'https://api.anthropic.com/v1/messages';
+const MODEL         = 'claude-sonnet-4-20250514';
+
+const SYSTEM_PROMPT = `You write short, casual text messages from a mortgage loan officer to a past client. \
+The messages should sound exactly like a real human texting a friend — not a business, \
+not a bot, not a template.
+
+Rules you never break:
+- 3 sentences maximum. Sometimes 2 is better.
+- No signature line. No "— Ryan" or "— Chris" at the end.
+- No bullet points. No line breaks between sentences unless it sounds natural.
+- Never use the word "potentially." Replace it with "looks like" or "I think" or "it seems."
+- Never mention the new payment amount — only the savings.
+- Never start with "I hope this message finds you well" or any formal opener.
+- Vary your openers — never start two versions with the same word or phrase.
+- Sound like the math was just run this morning and you're texting them immediately.
+- Include: their last name, sender first name, monthly savings dollar amount, property address, breakeven timeframe in plain English (not "X months" — say "about a year" or "under two years" etc.), and a soft one-question close.
+- If PMI is being eliminated, mention it naturally as a bonus — not as a separate paragraph.
+- Lowercase is fine for casual words. Match how real humans text.`;
+
+// ══ STATE ════════════════════════════════════════════════════════════
+let allClients   = [];
+let sender       = 'Ryan';
+let contactedIds = new Set();
+let apiKey       = '';
+
+// ══ MATH ENGINE ══════════════════════════════════════════════════════
+function calcPI(principal, annualRate, termMonths) {
+  if (!principal || !annualRate || !termMonths) return 0;
+  const r = annualRate / 12;
+  const f = Math.pow(1 + r, termMonths);
+  return principal * (r * f) / (f - 1);
+}
+
+function parseTermMonths(loanProgram) {
+  const s = String(loanProgram || '');
+  if (s.includes('30')) return { months: 360, isDefault: false };
+  if (s.includes('15')) return { months: 180, isDefault: false };
+  return { months: 360, isDefault: true };
+}
+
+function monthsElapsedSince(date) {
+  const today = new Date();
+  return (today.getFullYear() - date.getFullYear()) * 12 +
+         (today.getMonth()    - date.getMonth());
+}
+
+function resolveDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function parseRate(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  const n = parseFloat(String(val).replace('%', ''));
+  if (isNaN(n)) return 0;
+  return n > 1 ? n / 100 : n;
+}
+
+function calculateClient(row, idx) {
+  const loanType = String(row['Loan Type']    || '').toUpperCase().trim();
+  const loanProg = String(row['Loan Program'] || '');
+  const borrower = String(row['Borrower']     || '').trim();
+
+  const currentRate = parseRate(row['Current Rate']);
+  const convRate    = parseRate(row['Conv Rate Est.']);
+  const fhaRate     = parseRate(row['FHA Rate Est.']);
+  const origLoan    = parseFloat(row['Orig. Loan Amt'])   || 0;
+  const upb         = parseFloat(row['Current UPB'])      || 0;
+  const propValue   = parseFloat(row['Prop Value Est.'])  || 0;
+  const origLTV     = parseFloat(row['LTV'])     || 0;
+  const ltvEst      = parseFloat(row['LTV Est.']) || 0;
+  const pmiRaw      = row['PMI'];
+  const currentPMI  = (pmiRaw === null || pmiRaw === undefined || pmiRaw === '') ? 0 : parseFloat(pmiRaw) || 0;
+  const closingDate = resolveDate(row['Initial Closing']);
+
+  if (!upb || !currentRate || !origLoan) return null;
+  if (!closingDate) return null;
+
+  const newRate = (loanType === 'FHA') ? fhaRate : convRate;
+  if (!newRate) return null;
+
+  const { months: origTermMonths, isDefault } = parseTermMonths(loanProg);
+  const elapsed       = monthsElapsedSince(closingDate);
+  const remainingTerm = origTermMonths - elapsed;
+  if (remainingTerm < 1) return null;
+
+  // New loan = fresh full term (new 30-yr fixed)
+  const currentPI = calcPI(origLoan, currentRate, origTermMonths);
+  const newPI     = calcPI(upb, newRate, origTermMonths);
+  const piSavings = currentPI - newPI;
+
+  let pmiSavings = 0;
+  if (ltvEst > 80 && currentPMI > 0) {
+    const newLTV = propValue > 0 ? (upb / propValue) * 100 : ltvEst;
+    if (newLTV < 80) pmiSavings = currentPMI;
+  }
+
+  const totalSavings    = piSavings + pmiSavings;
+  const breakevenMonths = totalSavings > 0 ? Math.ceil(CLOSING_COSTS / totalSavings) : null;
+  const rateDelta       = currentRate - newRate;
+
+  const flags = [];
+  if (remainingTerm < 84)                                                 flags.push('SHORT_TERM');
+  if (pmiSavings > 0)                                                     flags.push('PMI_GONE');
+  if (loanType === 'CONV' && origLTV > 80 && ltvEst < 80 && currentPMI === 0) flags.push('PMI_CLEARED');
+  if (loanType === 'FHA' && ltvEst < 80)                                  flags.push('FHA_CONV');
+  if (totalSavings <= 0)                                                  flags.push('NO_SAVINGS');
+  if (isDefault)                                                          flags.push('DEFAULT_TERM');
+
+  let bucket;
+  if (totalSavings <= 0 || breakevenMonths === null) {
+    bucket = 'notYet';
+  } else if (totalSavings > 300 && breakevenMonths <= 18) {
+    bucket = 'actToday';
+  } else if (
+    (totalSavings >= 150 && totalSavings <= 300) ||
+    (breakevenMonths >= 19 && breakevenMonths <= 36)
+  ) {
+    bucket = 'worthALook';
+  } else {
+    bucket = 'notYet';
+  }
+
+  return {
+    id: 'c' + idx, borrower, loanNumber: String(row['Loan Number'] || ''),
+    phone: String(row['Borrower Phone'] || ''), email: String(row['Borrower Email'] || ''),
+    address: String(row['Address'] || '').trim(), origFico: String(row['Orig. FICO'] || ''),
+    loanType, loanProg, closingDate, currentRate, newRate, origLTV, ltvEst,
+    currentPI, newPI, piSavings, pmiSavings, totalSavings, breakevenMonths,
+    rateDelta, remainingTerm, flags, bucket,
+    conversationHistory: [], currentMessage: null,
+  };
+}
+
+// ══ COACHING NOTES ════════════════════════════════════════════════════
+function getCoachingNote(c) {
+  if (c.loanType === 'FHA' && c.ltvEst > 80)
+    return 'FHA MIP never cancels automatically — refi is the only exit. Lead with that.';
+  if (c.loanType === 'FHA' && c.ltvEst < 80)
+    return 'FHA to conventional refi eliminates MIP entirely. Strong story.';
+  if (c.loanType === 'CONV' && c.origLTV > 80 && c.ltvEst < 80)
+    return 'They may not know PMI has dropped off. Great opening line.';
+  if (c.remainingTerm < 84)
+    return 'Less than 7 years left — lead with breakeven, let them do the math.';
+  if (c.piSavings > 400)
+    return "Big savings — let the number speak first. Don't over-explain.";
+  if (c.breakevenMonths !== null && c.breakevenMonths <= 12)
+    return 'Break even in under a year. Easiest conversation you\'ll have today.';
+  if (c.pmiSavings > 0)
+    return `PMI elimination adds $${Math.round(c.pmiSavings)}/mo on top of rate savings. Mention it second.`;
+  return 'Solid candidate. Run the numbers, keep it short.';
+}
+
+// ══ BUCKETING ════════════════════════════════════════════════════════
+function bucketClients(clients) {
+  const by$ = (a, b) => b.totalSavings - a.totalSavings;
+  return {
+    actToday:   clients.filter(c => c.bucket === 'actToday').sort(by$),
+    worthALook: clients.filter(c => c.bucket === 'worthALook').sort(by$),
+    notYet:     clients.filter(c => c.bucket === 'notYet').sort(by$),
+  };
+}
+
+// ══ PARSING ═══════════════════════════════════════════════════════════
+function parseSheet(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+        const name = wb.SheetNames.includes('Export') ? 'Export' : wb.SheetNames[0];
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[name], { raw: true, defval: null }));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('FileReader error'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ══ RENDERING ════════════════════════════════════════════════════════
+const BADGE_MAP = {
+  SHORT_TERM:   ['b-short-term',   '⚠️ SHORT TERM',        'Less than 7 years remaining — review before outreach'],
+  PMI_GONE:     ['b-pmi-gone',     '✅ PMI GONE',           'Refi eliminates PMI — include in savings'],
+  PMI_CLEARED:  ['b-pmi-cleared',  '⚪ PMI LIKELY CLEARED', 'PMI may already be gone — confirm before mentioning'],
+  FHA_CONV:     ['b-fha-conv',     '🔵 FHA → CONV',         'Eligible for conventional refi — eliminates MIP'],
+  NO_SAVINGS:   ['b-no-savings',   '🔴 NO SAVINGS',          'No savings at today\'s rates'],
+  DEFAULT_TERM: ['b-default-term', '📋 DEFAULT TERM',        'Term assumed 30yr — verify'],
+};
+
+function renderBadges(flags) {
+  return flags.map(f => {
+    const b = BADGE_MAP[f];
+    return b ? `<span class="badge ${b[0]}" title="${b[2]}">${b[1]}</span>` : '';
+  }).join('');
+}
+
+function fmt$(n) { return '$' + Math.round(n).toLocaleString(); }
+function fmtR(r) { return (r * 100).toFixed(3).replace(/\.?0+$/, '') + '%'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = d instanceof Date ? d : new Date(d);
+  return dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+function renderCard(c) {
+  const isCtd     = contactedIds.has(c.id);
+  const noSavings = c.flags.includes('NO_SAVINGS');
+  const classes   = ['c-card'];
+  if (c.bucket === 'worthALook') classes.push('worth-a-look');
+  if (c.bucket === 'notYet')     classes.push('not-yet-card');
+  if (c.flags.includes('SHORT_TERM')) classes.push('short-term');
+  if (noSavings)   classes.push('no-savings-bg');
+  if (isCtd)       classes.push('contacted');
+
+  const savingsHTML = noSavings
+    ? `<span class="c-no-sav">No savings</span>`
+    : `<span class="c-savings">${fmt$(c.totalSavings)}/mo</span>`;
+
+  const beDisplay = (!c.breakevenMonths || c.breakevenMonths > 84)
+    ? '7+ yr breakeven'
+    : `${c.breakevenMonths} mo breakeven`;
+
+  const addrHTML = c.address
+    ? `<span class="addr">${c.address}</span>`
+    : `<span class="addr-missing">[Address]</span>`;
+
+  return `
+<div class="${classes.join(' ')}" id="card-${c.id}" data-id="${c.id}">
+  <div class="cr1">
+    <div class="c-borrower${isCtd ? ' struck' : ''}" id="name-${c.id}">${c.borrower || '—'}</div>
+    <div class="badge-group">${renderBadges(c.flags)}</div>
+  </div>
+  <div class="cr2">
+    ${savingsHTML}
+    ${!noSavings ? `<span class="c-rate-drop">↓ ${fmtR(c.rateDelta)}</span>` : ''}
+    ${!noSavings ? `<span class="c-breakeven">${beDisplay}</span>` : ''}
+    <span class="c-rates-muted">${fmtR(c.currentRate)} → ${fmtR(c.newRate)}</span>
+  </div>
+  <div class="cr3">${getCoachingNote(c)}</div>
+  <div class="cr4">
+    📞 ${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : '—'}
+    &nbsp;|&nbsp;
+    ✉️ ${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}<br>
+    ${c.loanType} · ${c.loanProg} &nbsp;|&nbsp; Closed: ${fmtDate(c.closingDate)} &nbsp;|&nbsp; FICO: ${c.origFico || '—'}<br>
+    ${addrHTML}
+  </div>
+  <div class="cr5"></div>
+  <div class="cr6">
+    <button class="btn-gen" id="btn-gen-${c.id}" onclick="handleGenClick('${c.id}')"
+      ${noSavings ? 'disabled title="No savings — text generation disabled"' : ''}>
+      GENERATE TEXT
+    </button>
+    <button class="btn-ctd${isCtd ? ' active' : ''}" id="btn-ctd-${c.id}"
+      onclick="toggleContacted('${c.id}')">
+      ${isCtd ? 'Contacted ✓' : 'Mark Contacted'}
+    </button>
+  </div>
+  <div class="txt-panel" id="panel-${c.id}"></div>
+</div>`;
+}
+
+function renderBucket(emoji, label, headline, hlWord, sub, clients, bucketCls, collapsed) {
+  if (!clients.length) return '';
+  const cards        = clients.map(renderCard).join('');
+  const headlineHTML = headline.replace(hlWord, `<span class="hl">${hlWord}</span>`);
+  if (collapsed) {
+    return `
+<div class="bucket-section ${bucketCls}">
+  <div class="bkt-label">${emoji} ${label}</div>
+  <div class="bkt-headline">${headlineHTML}</div>
+  <div class="bkt-sub">${sub}</div>
+  <button class="btn-expand" id="btn-expand-ny" onclick="toggleNotYet()">
+    Show ${clients.length} client${clients.length !== 1 ? 's' : ''}
+  </button>
+  <div class="not-yet-cards" id="ny-cards"><div class="card-grid">${cards}</div></div>
+</div>`;
+  }
+  return `
+<div class="bucket-section ${bucketCls}">
+  <div class="bkt-label">${emoji} ${label}</div>
+  <div class="bkt-headline">${headlineHTML}</div>
+  <div class="bkt-sub">${sub}</div>
+  <div class="card-grid">${cards}</div>
+</div>`;
+}
+
+function renderResults(buckets, convRate, fhaRate, skipped) {
+  document.getElementById('rate-banner-rates').innerHTML =
+    `<span class="rl">TODAY'S RATES — </span>CONV: ${(convRate * 100).toFixed(3)}% · FHA: ${(fhaRate * 100).toFixed(3)}%`;
+
+  const pos   = allClients.filter(c => c.totalSavings > 0);
+  const pmiEl = allClients.filter(c => c.pmiSavings > 0);
+  const avg   = pos.length ? Math.round(pos.reduce((a, c) => a + c.totalSavings, 0) / pos.length) : 0;
+  const top   = pos.length ? Math.round(Math.max(...pos.map(c => c.totalSavings))) : 0;
+
+  document.getElementById('s-pos').textContent = pos.length;
+  document.getElementById('s-avg').textContent = avg ? `$${avg}` : '—';
+  document.getElementById('s-top').textContent = top ? `$${top}` : '—';
+  document.getElementById('s-pmi').textContent = pmiEl.length;
+  document.getElementById('hdr-date').textContent =
+    new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('hc-total').textContent = allClients.length;
+  document.getElementById('hc-pos').textContent   = pos.length;
+  document.getElementById('hc-ctd').textContent   = contactedIds.size;
+
+  let html = '';
+  html += renderBucket('🔥','ACT TODAY','STRONGEST CASES TODAY','STRONGEST',
+    'These clients have the strongest case today.', buckets.actToday, 'bkt-act-today', false);
+  html += renderBucket('👀','WORTH A LOOK','WORTH THE CONVERSATION','CONVERSATION',
+    'Worth the conversation — let the math do the work.', buckets.worthALook, 'bkt-worth-a-look', false);
+  html += renderBucket('🕐','NOT YET','CHECK BACK WHEN RATES MOVE','RATES',
+    'Check back when rates move.', buckets.notYet, 'bkt-not-yet', true);
+  if (skipped > 0) html += `<p class="skipped-notice">${skipped} row${skipped !== 1 ? 's' : ''} skipped — missing required data.</p>`;
+
+  document.getElementById('results-main').innerHTML = html;
+}
+
+// ══ API CALLS ════════════════════════════════════════════════════════
+function buildUserMsg(c) {
+  const addr    = c.address || 'their place';
+  const pmiLine = c.pmiSavings > 0
+    ? `PMI eliminated: yes — saves $${Math.round(c.pmiSavings)}/month additional`
+    : 'PMI eliminated: no';
+  const loanCtx = `${c.loanType === 'FHA' ? 'FHA' : 'Conventional'} ${c.loanProg.toLowerCase().includes('15') ? '15yr' : '30yr'}`;
+  return `Client last name: ${c.borrower}
+Sender first name: ${sender}
+Monthly savings: $${Math.round(c.totalSavings)}
+Address: ${addr}
+Breakeven: ${c.breakevenMonths} months
+${pmiLine}
+Loan context: ${loanCtx}
+Closing date: ${fmtDate(c.closingDate)}
+
+Write one short, casual text message.`;
+}
+
+async function callAPI(messages) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':                              'application/json',
+      'x-api-key':                                 apiKey,
+      'anthropic-version':                         '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: SYSTEM_PROMPT, messages }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text || null;
+}
+
+async function generateText(cid) {
+  const c = allClients.find(x => x.id === cid);
+  const panel = document.getElementById(`panel-${cid}`);
+  if (!c || !panel) return;
+  panel.classList.add('open');
+  panel.innerHTML = `<div class="txt-loading">running the numbers...</div>`;
+  const userMsg  = buildUserMsg(c);
+  const messages = [{ role: 'user', content: userMsg }];
+  let text = null;
+  for (let i = 0; i < 2; i++) {
+    try { text = await callAPI(messages); break; }
+    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; } }
+  }
+  if (!text) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; }
+  c.conversationHistory = [{ role: 'user', content: userMsg }, { role: 'assistant', content: text }];
+  c.currentMessage = text;
+  renderTextPanel(c);
+}
+
+async function remixText(cid) {
+  const c = allClients.find(x => x.id === cid);
+  const panel = document.getElementById(`panel-${cid}`);
+  if (!c || !panel) return;
+  panel.innerHTML = `<div class="txt-loading">running the numbers...</div>`;
+  const messages = [...c.conversationHistory, { role: 'user', content: 'Write a different version. Different opener, different structure, different phrasing. Same facts.' }];
+  let text = null;
+  for (let i = 0; i < 2; i++) {
+    try { text = await callAPI(messages); break; }
+    catch { if (i === 1) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; } }
+  }
+  if (!text) { panel.innerHTML = `<div class="txt-error">couldn't reach the network — check connection and try again</div>`; return; }
+  c.conversationHistory = [...messages, { role: 'assistant', content: text }];
+  c.currentMessage = text;
+  renderTextPanel(c);
+}
+
+function renderTextPanel(c) {
+  const panel = document.getElementById(`panel-${c.id}`);
+  panel.classList.add('open');
+  panel.innerHTML = `
+<div class="txt-msg" id="msg-${c.id}">${c.currentMessage}</div>
+<div class="txt-actions">
+  <button class="btn-remix" onclick="remixText('${c.id}')">🔄 REMIX</button>
+  <button class="btn-copy" id="btn-copy-${c.id}" onclick="copyText('${c.id}')">COPY TEXT</button>
+</div>`;
+}
+
+// ══ UI INTERACTIONS ═══════════════════════════════════════════════════
+function handleGenClick(cid) {
+  const c = allClients.find(x => x.id === cid);
+  const panel = document.getElementById(`panel-${cid}`);
+  if (!c || !panel) return;
+  if (panel.classList.contains('open') && c.currentMessage) {
+    panel.classList.remove('open');
+    panel.innerHTML = '';
+    c.currentMessage = null;
+    c.conversationHistory = [];
+  } else {
+    generateText(cid);
+  }
+}
+
+function copyText(cid) {
+  const c = allClients.find(x => x.id === cid);
+  if (!c?.currentMessage) return;
+  navigator.clipboard.writeText(c.currentMessage).then(() => {
+    const btn = document.getElementById(`btn-copy-${cid}`);
+    if (!btn) return;
+    btn.textContent = 'COPIED ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY TEXT'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function toggleContacted(cid) {
+  contactedIds.has(cid) ? contactedIds.delete(cid) : contactedIds.add(cid);
+  const active = contactedIds.has(cid);
+  document.getElementById(`card-${cid}`)?.classList.toggle('contacted', active);
+  document.getElementById(`name-${cid}`)?.classList.toggle('struck',    active);
+  const btn = document.getElementById(`btn-ctd-${cid}`);
+  if (btn) { btn.textContent = active ? 'Contacted ✓' : 'Mark Contacted'; btn.classList.toggle('active', active); }
+  document.getElementById('hc-ctd').textContent = contactedIds.size;
+}
+
+function toggleSender(name) {
+  sender = name;
+  document.getElementById('btn-ryan').classList.toggle('active',  name === 'Ryan');
+  document.getElementById('btn-chris').classList.toggle('active', name === 'Chris');
+}
+
+function toggleNotYet() {
+  const cards = document.getElementById('ny-cards');
+  const btn   = document.getElementById('btn-expand-ny');
+  if (!cards || !btn) return;
+  const open = cards.classList.toggle('open');
+  const n    = cards.querySelectorAll('.c-card').length;
+  btn.textContent = open ? `Hide ${n} client${n !== 1 ? 's' : ''}` : `Show ${n} client${n !== 1 ? 's' : ''}`;
+}
+
+function resetUpload() {
+  allClients   = [];
+  contactedIds = new Set();
+  document.getElementById('screen-upload').style.display  = 'flex';
+  document.getElementById('screen-results').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('up-error').style.display = 'none';
+}
+
+// ══ FILE HANDLING ════════════════════════════════════════════════════
+async function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.xlsx')) { showErr('Please upload a .xlsx file'); return; }
+  apiKey = document.getElementById('api-key-input').value.trim();
+  let rows;
+  try { rows = await parseSheet(file); }
+  catch (err) { showErr('Could not read the file — make sure it\'s a valid Ruoff export. ' + err.message); return; }
+
+  const convRate = parseRate(rows[0]?.['Conv Rate Est.']);
+  const fhaRate  = parseRate(rows[0]?.['FHA Rate Est.']);
+  allClients = [];
+  let skipped = 0;
+  rows.forEach((row, i) => { const c = calculateClient(row, i); c ? allClients.push(c) : skipped++; });
+
+  if (!allClients.length) { showErr('No valid client rows found. Check that the sheet name is "Export" and required columns are present.'); return; }
+
+  const buckets = bucketClients(allClients);
+  document.getElementById('screen-upload').style.display  = 'none';
+  document.getElementById('screen-results').style.display = 'block';
+  window.scrollTo(0, 0);
+  renderResults(buckets, convRate, fhaRate, skipped);
+}
+
+function showErr(msg) {
+  const el = document.getElementById('up-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ══ EVENT LISTENERS ═══════════════════════════════════════════════════
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click',    () => fileInput.click());
+document.getElementById('btn-upload-trigger').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover',  e  => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',      e  => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
