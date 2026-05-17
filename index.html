@@ -1110,6 +1110,9 @@ function calculateClient(row, idx) {
   const breakevenMonths = totalSavings > 0 ? Math.ceil(CLOSING_COSTS / totalSavings) : null;
   const rateDelta       = currentRate - newRate;
 
+  const inRateAndTerm = totalSavings > 0;
+  const inEquity      = ltvEst > 0 && ltvEst <= 60;
+
   const flags = [];
   if (remainingTerm < 84)                                                 flags.push('SHORT_TERM');
   if (pmiSavings > 0)                                                     flags.push('PMI_GONE');
@@ -1117,9 +1120,6 @@ function calculateClient(row, idx) {
   if (loanType === 'FHA' && ltvEst < 80)                                  flags.push('FHA_CONV');
   if (totalSavings <= 0 && !inEquity)                                     flags.push('NO_SAVINGS');
   if (isDefault)                                                          flags.push('DEFAULT_TERM');
-
-  const inRateAndTerm = totalSavings > 0;
-  const inEquity      = ltvEst > 0 && ltvEst <= 60;
   const isDoubleDip   = inRateAndTerm && inEquity;
   if (isDoubleDip) flags.push('DOUBLE_DIP');
 
