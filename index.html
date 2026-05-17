@@ -822,7 +822,7 @@
   <div class="api-key-set" id="api-key-set">
     <span class="key-dot"></span>
     <span>API key set</span>
-    <button onclick="document.getElementById('api-key-wrap').style.display='block';document.getElementById('api-key-set').style.display='none';document.getElementById('api-key-input').focus();">change</button>
+    <button onclick="localStorage.removeItem('refi-caddy-api-key');apiKey='';document.getElementById('api-key-input').value='';document.getElementById('api-key-wrap').style.display='block';document.getElementById('api-key-set').style.display='none';document.getElementById('api-key-input').focus();">change</button>
   </div>
 
   <div class="drop-zone" id="drop-zone">
@@ -935,7 +935,15 @@ Rules you never break:
 let allClients   = [];
 let sender       = 'Ryan';
 let contactedIds = new Set();
-let apiKey       = '';
+let apiKey       = localStorage.getItem('refi-caddy-api-key') || '';
+
+(function restoreApiKey() {
+  if (!apiKey) return;
+  const input = document.getElementById('api-key-input');
+  if (input) input.value = apiKey;
+  document.getElementById('api-key-wrap').style.display = 'none';
+  document.getElementById('api-key-set').style.display  = 'flex';
+})();
 
 // ══ MATH ENGINE ══════════════════════════════════════════════════════
 function calcPI(principal, annualRate, termMonths) {
@@ -1395,6 +1403,7 @@ async function handleFile(file) {
   if (!file.name.toLowerCase().endsWith('.xlsx')) { showErr('Please upload a .xlsx file'); return; }
   apiKey = document.getElementById('api-key-input').value.trim();
   if (apiKey) {
+    localStorage.setItem('refi-caddy-api-key', apiKey);
     document.getElementById('api-key-wrap').style.display = 'none';
     document.getElementById('api-key-set').style.display  = 'flex';
   }
