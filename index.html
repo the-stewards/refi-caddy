@@ -1374,6 +1374,23 @@ function buildUserMsg(c) {
     : 'PMI eliminated: no';
   const loanCtx = `${c.loanType === 'FHA' ? 'FHA' : 'Conventional'} ${c.loanProg.toLowerCase().includes('15') ? '15yr' : '30yr'}`;
 
+  // Equity-only clients: angle the message around using equity to clean up debt
+  if (c.inEquity && !c.inRateAndTerm) {
+    const propVal = c.propValue > 0 ? c.propValue : (c.upb * 100 / c.ltvEst);
+    const maxCash = c.upb > 0 ? Math.round(propVal * 0.80 - c.upb) : 0;
+    return `Merge codes to use (use these literally in the output — do not replace them):
+  {firstname} = client first name
+  {agent_firstname} = ${sender}
+  {contact_address} = ${c.address || 'the property address'}
+
+Situation: This client has significant equity in their home (LTV: ${c.ltvEst.toFixed(0)}%${maxCash > 0 ? `, ~$${maxCash.toLocaleString()} accessible via cash-out to 80% LTV` : ''}).
+The message angle: a cash-out refi could let them pay off/clean up other debts — credit cards, car loans, student loans — and free up monthly cash flow. Keep it conversational and plant the idea, don't oversell.
+Loan context: ${loanCtx}
+Closing date: ${fmtDate(c.closingDate)}
+
+Write one short, casual text message using the merge codes above.`;
+  }
+
   return `Merge codes to use (use these literally in the output — do not replace them):
   {firstname} = client first name
   {agent_firstname} = ${sender}
