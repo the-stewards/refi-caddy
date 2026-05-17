@@ -1281,7 +1281,7 @@ function renderCard(c) {
     📞 ${c.phone ? `<a href="tel:${c.phone}">${c.phone}</a>` : '—'}
     &nbsp;|&nbsp;
     ✉️ ${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : '—'}<br>
-    ${esc(c.loanType)} · ${esc(c.loanProg)} &nbsp;|&nbsp; Closed: ${fmtDate(c.closingDate)} &nbsp;|&nbsp; FICO: ${esc(c.origFico) || '—'}<br>
+    ${esc(c.loanType)} · ${esc(c.loanProg)} &nbsp;|&nbsp; Closed: ${fmtDate(c.closingDate)} &nbsp;|&nbsp; FICO: ${esc(c.origFico) || '—'} &nbsp;|&nbsp; LTV: ${c.ltvEst ? c.ltvEst.toFixed(0) + '%' : '—'}<br>
     ${addrHTML}
   </div>
   <div class="cr5"></div>
