@@ -230,6 +230,31 @@
       transition: border-color 0.2s;
     }
     .api-key-wrap input:focus { border-color: var(--orange); }
+    .api-key-set {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    .api-key-set .key-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      flex-shrink: 0;
+    }
+    .api-key-set button {
+      background: none;
+      border: none;
+      color: var(--orange);
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
 
     .drop-zone {
       width: 100%;
@@ -790,9 +815,14 @@
   <div class="up-divider"></div>
   <p class="up-subhead">Upload today's enriched Ruoff sheet to see who's ready.</p>
 
-  <div class="api-key-wrap">
+  <div class="api-key-wrap" id="api-key-wrap">
     <label for="api-key-input">Anthropic API Key</label>
     <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+  </div>
+  <div class="api-key-set" id="api-key-set">
+    <span class="key-dot"></span>
+    <span>API key set</span>
+    <button onclick="document.getElementById('api-key-wrap').style.display='block';document.getElementById('api-key-set').style.display='none';document.getElementById('api-key-input').focus();">change</button>
   </div>
 
   <div class="drop-zone" id="drop-zone">
@@ -1364,6 +1394,10 @@ function resetUpload() {
 async function handleFile(file) {
   if (!file.name.toLowerCase().endsWith('.xlsx')) { showErr('Please upload a .xlsx file'); return; }
   apiKey = document.getElementById('api-key-input').value.trim();
+  if (apiKey) {
+    document.getElementById('api-key-wrap').style.display = 'none';
+    document.getElementById('api-key-set').style.display  = 'flex';
+  }
   let rows;
   try { rows = await parseSheet(file); }
   catch (err) { showErr('Could not read the file — make sure it\'s a valid Ruoff export. ' + err.message); return; }
