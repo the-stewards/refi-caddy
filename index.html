@@ -815,16 +815,6 @@
   <div class="up-divider"></div>
   <p class="up-subhead">Upload today's enriched Ruoff sheet to see who's ready.</p>
 
-  <div class="api-key-wrap" id="api-key-wrap">
-    <label for="api-key-input">Anthropic API Key</label>
-    <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
-  </div>
-  <div class="api-key-set" id="api-key-set">
-    <span class="key-dot"></span>
-    <span>API key set</span>
-    <button onclick="localStorage.removeItem('refi-caddy-api-key');apiKey='';document.getElementById('api-key-input').value='';document.getElementById('api-key-wrap').style.display='block';document.getElementById('api-key-set').style.display='none';document.getElementById('api-key-input').focus();">change</button>
-  </div>
-
   <div class="drop-zone" id="drop-zone">
     <div class="drop-zone-icon">📊</div>
     <p class="drop-zone-text">Drag your sheet here or click to upload</p>
@@ -935,15 +925,7 @@ Rules you never break:
 let allClients   = [];
 let sender       = 'Ryan';
 let contactedIds = new Set();
-let apiKey       = localStorage.getItem('refi-caddy-api-key') || '';
-
-(function restoreApiKey() {
-  if (!apiKey) return;
-  const input = document.getElementById('api-key-input');
-  if (input) input.value = apiKey;
-  document.getElementById('api-key-wrap').style.display = 'none';
-  document.getElementById('api-key-set').style.display  = 'flex';
-})();
+const apiKey     = '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';
 
 // ══ MATH ENGINE ══════════════════════════════════════════════════════
 function calcPI(principal, annualRate, termMonths) {
@@ -1086,6 +1068,19 @@ function bucketClients(clients) {
 }
 
 // ══ PARSING ═══════════════════════════════════════════════════════════
+function normalizeRow(raw) {
+  const keyMap = {};
+  Object.keys(raw).forEach(k => { keyMap[k.trim().toLowerCase()] = k; });
+  return new Proxy(raw, {
+    get(target, prop) {
+      if (typeof prop !== 'string') return target[prop];
+      if (prop in target) return target[prop];
+      const lower = prop.trim().toLowerCase();
+      return lower in keyMap ? target[keyMap[lower]] : undefined;
+    }
+  });
+}
+
 function parseSheet(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1093,7 +1088,7 @@ function parseSheet(file) {
       try {
         const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
         const name = wb.SheetNames.includes('Export') ? 'Export' : wb.SheetNames[0];
-        resolve(XLSX.utils.sheet_to_json(wb.Sheets[name], { raw: true, defval: null }));
+        resolve(XLSX.utils.sheet_to_json(wb.Sheets[name], { raw: true, defval: null }).map(normalizeRow));
       } catch (err) { reject(err); }
     };
     reader.onerror = () => reject(new Error('FileReader error'));
@@ -1401,12 +1396,6 @@ function resetUpload() {
 // ══ FILE HANDLING ════════════════════════════════════════════════════
 async function handleFile(file) {
   if (!file.name.toLowerCase().endsWith('.xlsx')) { showErr('Please upload a .xlsx file'); return; }
-  apiKey = document.getElementById('api-key-input').value.trim();
-  if (apiKey) {
-    localStorage.setItem('refi-caddy-api-key', apiKey);
-    document.getElementById('api-key-wrap').style.display = 'none';
-    document.getElementById('api-key-set').style.display  = 'flex';
-  }
   let rows;
   try { rows = await parseSheet(file); }
   catch (err) { showErr('Could not read the file — make sure it\'s a valid Ruoff export. ' + err.message); return; }
@@ -1417,7 +1406,7 @@ async function handleFile(file) {
   let skipped = 0;
   rows.forEach((row, i) => { const c = calculateClient(row, i); c ? allClients.push(c) : skipped++; });
 
-  if (!allClients.length) { showErr('No valid client rows found. Check that the sheet name is "Export" and required columns are present.'); return; }
+  if (!allClients.length) { const cols = rows[0] ? Object.keys(rows[0]).join(', ') : 'none'; showErr(`No valid client rows found. Columns detected: ${cols}`); return; }
 
   const buckets = bucketClients(allClients);
   document.getElementById('screen-upload').style.display  = 'none';
