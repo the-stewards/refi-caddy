@@ -1005,7 +1005,7 @@ function checkPassword() {
 
 // ══ CONFIG ═══════════════════════════════════════════════════════════
 const CLOSING_COSTS = 3500;
-const API_URL       = 'https://api.anthropic.com/v1/messages';
+const API_URL       = '/api/claude';
 const MODEL         = 'claude-sonnet-4-6';
 
 const SYSTEM_PROMPT = `You write short, casual text messages from a mortgage loan officer to a past client. \
@@ -1036,7 +1036,6 @@ Rules you never break:
 let allClients   = [];
 let sender       = 'Ryan';
 let contactedIds = new Set();
-const apiKey     = atob('c2stYW50LWFwaTAzLXp0V01JcGF5Rmx5RDdqQmhRUmlpcFBhVG5GSjV1cDdvY2JYdVRkLWZtZGhadTdaUzRWLW1KeGFoWWRLaUJPdUgzWFNsUHBZNl9DR0R0TTNmRUZ5dWh3LXJ0RW5Od0FB');
 
 // ══ MATH ENGINE ══════════════════════════════════════════════════════
 function calcPI(principal, annualRate, termMonths) {
@@ -1431,10 +1430,7 @@ async function callAPI(messages) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
-      'Content-Type':                              'application/json',
-      'x-api-key':                                 apiKey,
-      'anthropic-version':                         '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: SYSTEM_PROMPT, messages }),
   });
