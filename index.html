@@ -1505,11 +1505,6 @@ function handleGenClick(cid) {
     c.currentMessage = null;
     c.conversationHistory = [];
   } else {
-    if (!apiKey) {
-      panel.classList.add('open');
-      panel.innerHTML = `<div class="txt-error">Paste your Anthropic API key in the field above before generating text.</div>`;
-      return;
-    }
     generateText(cid);
   }
 }
