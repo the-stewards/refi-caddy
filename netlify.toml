@@ -2,3 +2,8 @@
   publish = "."
   command = ""
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/claude"
+  to   = "/.netlify/functions/claude"
+  status = 200
