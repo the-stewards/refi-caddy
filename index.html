@@ -1393,7 +1393,7 @@ function buildUserMsg(c) {
   const pmiLine = c.pmiSavings > 0
     ? `PMI eliminated: yes — saves $${Math.round(c.pmiSavings)}/month additional`
     : 'PMI eliminated: no';
-  const loanCtx = `${c.loanType === 'FHA' ? 'FHA' : 'Conventional'} ${c.loanProg.toLowerCase().includes('15') ? '15yr' : '30yr'}`;
+  const loanCtx = `${c.loanType === 'FHA' ? 'FHA' : 'Conventional'} ${(c.loanProg || '').toLowerCase().includes('15') ? '15yr' : '30yr'}`;
 
   // Equity-only clients: angle the message around using equity to clean up debt
   if (c.inEquity && !c.inRateAndTerm) {
